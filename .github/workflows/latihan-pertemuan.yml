@@ -1,0 +1,107 @@
+name: Latihan Java per Pertemuan
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  run-pertemuan:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - dir: Pertemuan01
+            main: HelloWorld
+          - dir: Pertemuan02
+            main: Main
+          - dir: Pertemuan03
+            main: Main
+          - dir: Pertemuan04
+            main: Main
+          - dir: Pertemuan05
+            main: Main
+          - dir: Pertemuan06
+            main: Main
+          - dir: Pertemuan07
+            main: Main
+          - dir: Pertemuan08
+            skip: true              # Tidak ada .java → skip
+          - dir: Pertemuan09
+            main: Main
+          - dir: Pertemuan10
+            main: Main
+          - dir: Pertemuan11
+            main: Main
+          - dir: Pertemuan12
+            main: Main
+            stdin: |
+              1
+              A01
+              Ani
+              3
+              0
+          - dir: Pertemuan13
+            main: Main
+            stdin: |
+              10
+              2
+          - dir: Pertemuan14
+            main: Main
+          - dir: Pertemuan15
+            main: Main
+          - dir: Pertemuan16
+            main: App
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Temurin JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Skip marker
+        if: matrix.skip == 'true'
+        run: echo "Skipping ${{ matrix.dir }} (no Java files)"
+
+      - name: Compile ${{ matrix.dir }}
+        if: matrix.skip != 'true'
+        shell: bash
+        run: |
+          set -e
+          cd "${{ matrix.dir }}"
+          if compgen -G "*.java" > /dev/null; then
+            javac *.java
+          else
+            echo "No Java files in ${{ matrix.dir }}, skipping compile."
+            exit 0
+          fi
+
+      - name: Run ${{ matrix.dir }} (${{ matrix.main }})
+        if: matrix.skip != 'true'
+        shell: bash
+        run: |
+          set -e
+          cd "${{ matrix.dir }}"
+          if [ -n "${{ matrix.main }}" ] && [ -f "${{ matrix.main }}.class" ]; then
+            if [ -n "${{ matrix.stdin }}" ]; then
+              printf "%s" "${{ matrix.stdin }}" | java "${{ matrix.main }}"
+            else
+              java "${{ matrix.main }}"
+            fi
+          else
+            echo "Main class not found or not specified, skipping run."
+          fi
+
+      - name: Upload class files (opsional)
+        if: always() && matrix.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: classes-${{ matrix.dir }}
+          path: ${{ matrix.dir }}/*.class
+          if-no-files-found: ignore
